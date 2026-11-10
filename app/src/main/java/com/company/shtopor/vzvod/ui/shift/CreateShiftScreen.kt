@@ -166,11 +166,7 @@ fun CreateShiftScreen(
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         FieldLabel("Напарники")
                         FieldHint(
-                            if (com.company.shtopor.vzvod.domain.CheckingShiftPolicy.isChecking(typeId)) {
-                                "Для проверок напарник необязателен — можно одному или выбрать коллег."
-                            } else {
-                                "Можно выбрать нескольких. Сначала ваше отделение, затем другое, внутри — по фамилии. Занятые в смене скрыты."
-                            }
+                            "Напарник необязателен — можно одному или выбрать коллег. Сначала ваше отделение, затем другое, внутри — по фамилии. Занятые в смене скрыты."
                         )
                         if (colleagues.isEmpty()) {
                             FieldHint("Список пуст или недоступен офлайн. Проверьте сеть.")

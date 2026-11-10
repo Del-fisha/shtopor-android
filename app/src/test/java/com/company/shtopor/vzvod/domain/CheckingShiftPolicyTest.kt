@@ -14,10 +14,10 @@ class CheckingShiftPolicyTest {
     }
 
     @Test
-    fun partnersRequired_falseOnlyForChecking() {
+    fun partnersRequired_never() {
         assertFalse(CheckingShiftPolicy.partnersRequired("CHECKING"))
-        assertTrue(CheckingShiftPolicy.partnersRequired("BAT_POST"))
-        assertTrue(CheckingShiftPolicy.partnersRequired(null))
+        assertFalse(CheckingShiftPolicy.partnersRequired("BAT_POST"))
+        assertFalse(CheckingShiftPolicy.partnersRequired(null))
     }
 
     @Test

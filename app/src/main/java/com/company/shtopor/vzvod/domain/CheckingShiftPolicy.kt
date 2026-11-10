@@ -9,7 +9,7 @@ object CheckingShiftPolicy {
     fun isChecking(typeOfShiftId: String?): Boolean =
         TYPE_ID.equals(typeOfShiftId?.trim(), ignoreCase = false)
 
-    fun partnersRequired(typeOfShiftId: String?): Boolean = !isChecking(typeOfShiftId)
+    fun partnersRequired(typeOfShiftId: String?): Boolean = false
 
     fun showRouteCheckCounters(typeOfShiftId: String?): Boolean = isChecking(typeOfShiftId)
 
