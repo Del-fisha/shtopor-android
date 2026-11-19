@@ -16,6 +16,9 @@ import com.company.shtopor.vzvod.data.remote.dto.BotProfilePatchRequest
 import com.company.shtopor.vzvod.data.remote.dto.BotProfileResponse
 import com.company.shtopor.vzvod.data.remote.dto.BotRouteCheckCreateRequest
 import com.company.shtopor.vzvod.data.remote.dto.BotRouteCheckItem
+import com.company.shtopor.vzvod.data.remote.dto.BotRouteCheckUpdateRequest
+import com.company.shtopor.vzvod.data.remote.dto.BotStaffPageResponse
+import com.company.shtopor.vzvod.data.remote.dto.BotStaffWorkResponse
 import com.company.shtopor.vzvod.data.remote.dto.BotShiftEndTimeRequest
 import com.company.shtopor.vzvod.data.remote.dto.BotShiftItem
 import com.company.shtopor.vzvod.data.remote.dto.BotShiftMetricDeltaRequest
@@ -44,6 +47,38 @@ import retrofit2.Response
 interface BotApi {
     @POST("/api/mobile/auth")
     suspend fun auth(@Body body: BotAuthRequest): BotAuthResponse
+
+    @GET("/api/mobile/me/staff")
+    suspend fun staff(
+        @Header("X-Mobile-Token") token: String,
+        @Query("q") query: String? = null,
+        @Query("page") page: Int = 0,
+        @Query("pageSize") pageSize: Int = 20
+    ): BotStaffPageResponse
+
+    @GET("/api/mobile/me/staff/{userId}/profile")
+    suspend fun staffProfile(
+        @Header("X-Mobile-Token") token: String,
+        @Path("userId") userId: String
+    ): BotProfileResponse
+
+    @GET("/api/mobile/me/staff/{userId}/education")
+    suspend fun staffEducation(
+        @Header("X-Mobile-Token") token: String,
+        @Path("userId") userId: String
+    ): Response<BotEducationDto>
+
+    @GET("/api/mobile/me/staff/{userId}/work")
+    suspend fun staffWork(
+        @Header("X-Mobile-Token") token: String,
+        @Path("userId") userId: String
+    ): BotStaffWorkResponse
+
+    @GET("/api/mobile/me/staff/{userId}/vehicles")
+    suspend fun staffVehicles(
+        @Header("X-Mobile-Token") token: String,
+        @Path("userId") userId: String
+    ): BotVehiclesResponse
 
     @GET("/api/mobile/me/profile")
     suspend fun profile(@Header("X-Mobile-Token") token: String): BotProfileResponse
@@ -115,6 +150,13 @@ interface BotApi {
         @Header("X-Mobile-Token") token: String,
         @Path("id") id: String,
         @Body body: BotRouteCheckCreateRequest
+    ): BotRouteCheckItem
+
+    @PUT("/api/mobile/me/route-checks/{checkId}")
+    suspend fun updateRouteCheck(
+        @Header("X-Mobile-Token") token: String,
+        @Path("checkId") checkId: String,
+        @Body body: BotRouteCheckUpdateRequest
     ): BotRouteCheckItem
 
     @DELETE("/api/mobile/me/route-checks/{checkId}")

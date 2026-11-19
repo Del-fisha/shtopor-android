@@ -29,11 +29,14 @@ import androidx.lifecycle.LifecycleEventObserver
 import com.company.shtopor.vzvod.data.local.PetrovichBaselineStore
 import com.company.shtopor.vzvod.data.remote.ApiResult
 import com.company.shtopor.vzvod.data.remote.dto.BotCheckableRouteItem
+import com.company.shtopor.vzvod.data.remote.dto.BotRouteCheckItem
+import com.company.shtopor.vzvod.data.remote.dto.BotRouteCheckerOption
 import com.company.shtopor.vzvod.data.remote.dto.BotShiftItem
 import com.company.shtopor.vzvod.data.remote.dto.BotTodayDashboardResponse
 import com.company.shtopor.vzvod.data.remote.userMessage
 import com.company.shtopor.vzvod.di.AppContainer
 import com.company.shtopor.vzvod.domain.CheckingRouteButtonLabel
+import com.company.shtopor.vzvod.domain.RouteCheckEditLogic
 import com.company.shtopor.vzvod.domain.CheckingRouteCounters
 import com.company.shtopor.vzvod.domain.CheckingShiftPolicy
 import com.company.shtopor.vzvod.domain.PetrovichMetrics
@@ -71,6 +74,8 @@ fun ShiftsScreen(
     var dashboard by remember { mutableStateOf<BotTodayDashboardResponse?>(null) }
     var dashboardError by remember { mutableStateOf<String?>(null) }
     var checkableRoutes by remember { mutableStateOf<List<BotCheckableRouteItem>>(emptyList()) }
+    var routeCommanders by remember { mutableStateOf<List<BotRouteCheckerOption>>(emptyList()) }
+    var editingCheck by remember { mutableStateOf<Pair<String, BotRouteCheckItem>?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var petrovich by remember { mutableStateOf<PetrovichPlayback>(PetrovichPlayback.Loop(1)) }
     var petrovichReady by remember { mutableStateOf(false) }
@@ -103,12 +108,18 @@ fun ShiftsScreen(
             val checkingShift = open
             if (checkingShift != null && CheckingShiftPolicy.showRouteCheckCounters(checkingShift.typeOfShiftId)) {
                 when (val r = container.repository.loadCheckableRoutes(checkingShift.id)) {
-                    is ApiResult.Ok -> checkableRoutes = r.value.routes.orEmpty()
-                    is ApiResult.Err -> checkableRoutes =
-                        container.repository.cachedCheckableRoutes(checkingShift.id)
+                    is ApiResult.Ok -> {
+                        checkableRoutes = r.value.routes.orEmpty()
+                        routeCommanders = r.value.commanders.orEmpty()
+                    }
+                    is ApiResult.Err -> {
+                        checkableRoutes = container.repository.cachedCheckableRoutes(checkingShift.id)
+                        routeCommanders = container.repository.cachedRouteCommanders(checkingShift.id)
+                    }
                 }
             } else {
                 checkableRoutes = emptyList()
+                routeCommanders = emptyList()
             }
         }
     }
@@ -299,8 +310,12 @@ fun ShiftsScreen(
                                                 current.id,
                                                 route.routeId
                                             )) {
-                                                is ApiResult.Ok -> checkableRoutes =
-                                                    container.repository.cachedCheckableRoutes(current.id)
+                                                is ApiResult.Ok -> {
+                                                    checkableRoutes =
+                                                        container.repository.cachedCheckableRoutes(current.id)
+                                                    routeCommanders =
+                                                        container.repository.cachedRouteCommanders(current.id)
+                                                }
                                                 is ApiResult.Err -> error = r.userMessage()
                                             }
                                         }
@@ -315,14 +330,35 @@ fun ShiftsScreen(
                                                     current.id,
                                                     checkId
                                                 )) {
-                                                    is ApiResult.Ok -> checkableRoutes =
-                                                        container.repository.cachedCheckableRoutes(current.id)
+                                                    is ApiResult.Ok -> {
+                                                        checkableRoutes =
+                                                            container.repository.cachedCheckableRoutes(current.id)
+                                                        routeCommanders =
+                                                            container.repository.cachedRouteCommanders(current.id)
+                                                    }
                                                     is ApiResult.Err -> error = r.userMessage()
                                                 }
                                             }
                                         }
                                     }
                                 )
+                                route.checks.orEmpty().forEach { check ->
+                                    val checkId = check.id
+                                    if (checkId.isNullOrBlank()) return@forEach
+                                    SecondaryActionButton(
+                                        text = buildString {
+                                            append(RouteCheckEditLogic.displayTime(check.checkedAt))
+                                            check.checkerLabel?.takeIf { it.isNotBlank() }?.let {
+                                                append(" · ")
+                                                append(it)
+                                            }
+                                        },
+                                        onClick = {
+                                            val label = route.routeLabel?.takeIf { it.isNotBlank() } ?: route.routeId
+                                            editingCheck = label to check
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
@@ -478,6 +514,50 @@ fun ShiftsScreen(
 
                 Spacer(Modifier.height(28.dp))
             }
+        }
+    }
+
+    val editTarget = editingCheck
+    val editShiftId = open?.id
+    if (editTarget != null && editShiftId != null) {
+        val (routeLabel, check) = editTarget
+        val checkId = check.id
+        if (!checkId.isNullOrBlank()) {
+            RouteCheckEditDialog(
+                routeLabel = routeLabel,
+                check = check,
+                commanders = routeCommanders,
+                onDismiss = { editingCheck = null },
+                onSave = { time, checkerId ->
+                    scope.launch {
+                        when (val r = container.repository.updateRouteCheck(
+                            editShiftId,
+                            checkId,
+                            time,
+                            checkerId
+                        )) {
+                            is ApiResult.Ok -> {
+                                checkableRoutes = container.repository.cachedCheckableRoutes(editShiftId)
+                                routeCommanders = container.repository.cachedRouteCommanders(editShiftId)
+                                editingCheck = null
+                            }
+                            is ApiResult.Err -> error = r.userMessage()
+                        }
+                    }
+                },
+                onDelete = {
+                    scope.launch {
+                        when (val r = container.repository.deleteRouteCheck(editShiftId, checkId)) {
+                            is ApiResult.Ok -> {
+                                checkableRoutes = container.repository.cachedCheckableRoutes(editShiftId)
+                                routeCommanders = container.repository.cachedRouteCommanders(editShiftId)
+                                editingCheck = null
+                            }
+                            is ApiResult.Err -> error = r.userMessage()
+                        }
+                    }
+                }
+            )
         }
     }
 

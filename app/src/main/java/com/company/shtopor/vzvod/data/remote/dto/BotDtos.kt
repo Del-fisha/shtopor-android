@@ -29,7 +29,9 @@ data class BotProfileResponse(
     val idCardIssued: String?,
     val idCardUntil: String?,
     val nearestMetro: Int? = null,
-    val nearestMetroLabel: String? = null
+    val nearestMetroLabel: String? = null,
+    val fullAccess: Boolean? = null,
+    val dateOfBirth: String? = null
 )
 
 data class BotAddressResponse(
@@ -107,7 +109,13 @@ data class BotShiftEndTimeRequest(val endTime: String)
 data class BotShiftMetricDeltaRequest(val delta: Int)
 
 data class BotCheckableRoutesResponse(
-    val routes: List<BotCheckableRouteItem>? = emptyList()
+    val routes: List<BotCheckableRouteItem>? = emptyList(),
+    val commanders: List<BotRouteCheckerOption>? = emptyList()
+)
+
+data class BotRouteCheckerOption(
+    val serviceInfoId: String,
+    val label: String? = null
 )
 
 data class BotCheckableRouteItem(
@@ -120,11 +128,47 @@ data class BotRouteCheckItem(
     val id: String? = null,
     val checkedAt: String? = null,
     val checkerLabel: String? = null,
-    val display: String? = null
+    val display: String? = null,
+    val checkerServiceInfoId: String? = null
 )
 
 data class BotRouteCheckCreateRequest(
     val routeId: String
+)
+
+data class BotRouteCheckUpdateRequest(
+    val checkedAt: String? = null,
+    val checkerServiceInfoId: String? = null
+)
+
+data class BotStaffPageResponse(
+    val items: List<BotStaffItem>? = emptyList(),
+    val page: Int? = 0,
+    val hasMore: Boolean? = false
+)
+
+data class BotStaffItem(
+    val userId: String,
+    val displayName: String? = null,
+    val post: String? = null,
+    val department: String? = null,
+    val rank: String? = null
+)
+
+data class BotStaffWorkResponse(
+    val year: Int? = null,
+    val month: BotWorkTotals? = null,
+    val yearTotals: BotWorkTotals? = null,
+    val allTime: BotWorkTotals? = null,
+    val vacationEntitled: Int? = 0,
+    val vacationRemaining: Int? = 0,
+    val vacationsThisYear: List<BotVocationItem>? = emptyList()
+)
+
+data class BotWorkTotals(
+    val ibdr: Int? = 0,
+    val administrative: Int? = 0,
+    val criminal: Int? = 0
 )
 
 data class BotColleaguesResponse(

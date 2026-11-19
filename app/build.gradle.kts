@@ -13,8 +13,8 @@ android {
         applicationId = "com.company.shtopor.vzvod"
         minSdk = 29
         targetSdk = 35
-        versionCode = 12
-        versionName = "1.4.2"
+        versionCode = 14
+        versionName = "1.4.2.2"
         buildConfigField("String", "DEFAULT_CORE_BASE_URL", "\"http://www.vzvod-shtopor.ru\"")
         buildConfigField("String", "DEFAULT_API_KEY", "\"\"")
     }
@@ -22,6 +22,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("debug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

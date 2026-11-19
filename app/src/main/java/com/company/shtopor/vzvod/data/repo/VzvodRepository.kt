@@ -27,6 +27,10 @@ import com.company.shtopor.vzvod.data.remote.dto.BotCheckableRouteItem
 import com.company.shtopor.vzvod.data.remote.dto.BotCheckableRoutesResponse
 import com.company.shtopor.vzvod.data.remote.dto.BotRouteCheckCreateRequest
 import com.company.shtopor.vzvod.data.remote.dto.BotRouteCheckItem
+import com.company.shtopor.vzvod.data.remote.dto.BotRouteCheckUpdateRequest
+import com.company.shtopor.vzvod.data.remote.dto.BotRouteCheckerOption
+import com.company.shtopor.vzvod.data.remote.dto.BotStaffPageResponse
+import com.company.shtopor.vzvod.data.remote.dto.BotStaffWorkResponse
 import com.company.shtopor.vzvod.data.remote.dto.BotShiftEndTimeRequest
 import com.company.shtopor.vzvod.data.remote.dto.BotShiftItem
 import com.company.shtopor.vzvod.data.remote.dto.BotShiftMetricDeltaRequest
@@ -85,6 +89,7 @@ class VzvodRepository(
 
     private val syncMutex = Mutex()
     private val checkableRoutesCache = java.util.concurrent.ConcurrentHashMap<String, List<BotCheckableRouteItem>>()
+    private val routeCommandersCache = java.util.concurrent.ConcurrentHashMap<String, List<BotRouteCheckerOption>>()
 
     fun pendingOpsFlow(): Flow<Int> = db.outboxDao().pendingCountFlow()
 
@@ -162,12 +167,16 @@ class VzvodRepository(
         val result = safeApiCall { apiFactory.api().checkableRoutes(token(), shiftId) }
         if (result is ApiResult.Ok) {
             checkableRoutesCache[shiftId] = result.value.routes.orEmpty()
+            routeCommandersCache[shiftId] = result.value.commanders.orEmpty()
         }
         return result
     }
 
     fun cachedCheckableRoutes(shiftId: String): List<BotCheckableRouteItem> =
         checkableRoutesCache[shiftId].orEmpty()
+
+    fun cachedRouteCommanders(shiftId: String): List<BotRouteCheckerOption> =
+        routeCommandersCache[shiftId].orEmpty()
 
     private suspend fun ensureCheckableRoutes(shiftId: String): List<BotCheckableRouteItem> {
         loadCheckableRoutes(shiftId)
@@ -177,6 +186,26 @@ class VzvodRepository(
     suspend fun recordRouteCheck(shiftId: String, routeId: String): ApiResult<BotRouteCheckItem> {
         val result = safeApiCall {
             apiFactory.api().recordRouteCheck(token(), shiftId, BotRouteCheckCreateRequest(routeId))
+        }
+        if (result is ApiResult.Ok) {
+            loadCheckableRoutes(shiftId)
+            refreshNotificationFromCache()
+        }
+        return result
+    }
+
+    suspend fun updateRouteCheck(
+        shiftId: String,
+        checkId: String,
+        checkedAt: String,
+        checkerServiceInfoId: String?
+    ): ApiResult<BotRouteCheckItem> {
+        val result = safeApiCall {
+            apiFactory.api().updateRouteCheck(
+                token(),
+                checkId,
+                BotRouteCheckUpdateRequest(checkedAt, checkerServiceInfoId)
+            )
         }
         if (result is ApiResult.Ok) {
             loadCheckableRoutes(shiftId)
@@ -203,6 +232,41 @@ class VzvodRepository(
     }
 
     private suspend fun cachedOpenShift(): BotShiftItem? = getCachedOpenShift()
+
+    suspend fun loadStaff(query: String, page: Int): ApiResult<BotStaffPageResponse> {
+        if (!networkMonitor.isOnlineNow()) return ApiResult.Err(0, "Нет сети", offline = true)
+        val q = query.trim().ifBlank { null }
+        return safeApiCall { apiFactory.api().staff(token(), q, page, 20) }
+    }
+
+    suspend fun loadStaffProfile(userId: String): ApiResult<BotProfileResponse> {
+        if (!networkMonitor.isOnlineNow()) return ApiResult.Err(0, "Нет сети", offline = true)
+        return safeApiCall { apiFactory.api().staffProfile(token(), userId) }
+    }
+
+    suspend fun loadStaffEducation(userId: String): ApiResult<BotEducationDto?> {
+        if (!networkMonitor.isOnlineNow()) return ApiResult.Err(0, "Нет сети", offline = true)
+        return safeApiCall {
+            val response = apiFactory.api().staffEducation(token(), userId)
+            if (!response.isSuccessful && response.code() != 204) {
+                throw retrofit2.HttpException(response)
+            }
+            EducationResponseMapper.from(response)
+        }
+    }
+
+    suspend fun loadStaffWork(userId: String): ApiResult<BotStaffWorkResponse> {
+        if (!networkMonitor.isOnlineNow()) return ApiResult.Err(0, "Нет сети", offline = true)
+        return safeApiCall { apiFactory.api().staffWork(token(), userId) }
+    }
+
+    suspend fun loadStaffVehicles(userId: String): ApiResult<List<BotVehicleItem>> {
+        if (!networkMonitor.isOnlineNow()) return ApiResult.Err(0, "Нет сети", offline = true)
+        return when (val result = safeApiCall { apiFactory.api().staffVehicles(token(), userId) }) {
+            is ApiResult.Ok -> ApiResult.Ok(result.value.items.orEmpty())
+            is ApiResult.Err -> result
+        }
+    }
 
     suspend fun refreshProfile(): ApiResult<BotProfileResponse> {
         if (!session.isLoggedIn) return ApiResult.Err(401, "Не авторизован")

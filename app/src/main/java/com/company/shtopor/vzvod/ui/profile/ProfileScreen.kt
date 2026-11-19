@@ -69,6 +69,7 @@ fun ProfileScreen(
     var error by remember { mutableStateOf<String?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
     var confirmLogout by remember { mutableStateOf(false) }
+    var browsingStaff by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     fun reloadExtras() {
@@ -106,6 +107,20 @@ fun ProfileScreen(
         container.repository.pendingOpsFlow().collectLatest { pending = it }
     }
 
+    if (browsingStaff) {
+        PageScaffold(online = online, pendingCount = pending, modifier = modifier) {
+            StaffDirectoryScreen(
+                container = container,
+                onBack = { browsingStaff = false },
+                onError = { error = it }
+            )
+        }
+        error?.let {
+            ErrorRetryDialog(it, onRetry = { error = null }, onDismiss = { error = null })
+        }
+        return
+    }
+
     PageScaffold(online = online, pendingCount = pending, modifier = modifier) {
         Column(
             Modifier
@@ -115,9 +130,17 @@ fun ProfileScreen(
         ) {
             SectionTitle("Профиль")
 
+            if (container.repository.role().isCommander) {
+                SecondaryActionButton(
+                    "Карточка сотрудника",
+                    onClick = { browsingStaff = true }
+                )
+            }
+
             SoftPanel {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(profile?.displayName ?: "—", style = MaterialTheme.typography.titleLarge)
+                    ProfileField("Дата рождения", ProfileDisplayFormat.idCardDate(profile?.dateOfBirth))
                     ProfileField("Звание", profile?.rank ?: "—")
                     ProfileField("Должность", profile?.post ?: "—")
                     ProfileField("Отделение", profile?.department ?: "—")
@@ -336,7 +359,7 @@ private fun ProfileField(label: String, value: String) {
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold
         )
-        Text(value, style = MaterialTheme.typography.bodyLarge)
+        Text(value, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.fillMaxWidth())
     }
 }
 
