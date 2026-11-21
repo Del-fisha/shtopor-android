@@ -96,7 +96,7 @@ fun StaffDirectoryScreen(
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        SectionTitle("Сотрудники", "Та же карточка, что в профиле. Только просмотр.")
+        SectionTitle("Карточка другого сотрудника", "Только просмотр.")
         OutlinedTextField(
             value = query,
             onValueChange = { query = it },
@@ -115,17 +115,19 @@ fun StaffDirectoryScreen(
             Text("Никого не найдено", color = InkMuted)
         } else {
             items.forEach { person ->
-                val title = person.displayName?.takeIf { it.isNotBlank() } ?: "Сотрудник"
-                val subtitle = listOfNotNull(
-                    person.post?.takeIf { it.isNotBlank() },
-                    person.rank?.takeIf { it.isNotBlank() },
-                    person.department?.takeIf { it.isNotBlank() }
-                ).joinToString(" · ")
+                val name = person.displayName?.takeIf { it.isNotBlank() } ?: "Сотрудник"
+                val rank = person.rank?.takeIf { it.isNotBlank() }
+                val post = person.post?.takeIf { it.isNotBlank() } ?: "—"
                 SoftPanel(Modifier.clickable { viewedId = person.userId }) {
-                    Text(title, style = MaterialTheme.typography.titleMedium)
-                    if (subtitle.isNotBlank()) {
-                        Text(subtitle, color = InkMuted, style = MaterialTheme.typography.bodyMedium)
-                    }
+                    Text(
+                        if (rank == null) name else "$name ($rank)",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        "$post, ${ProfileDisplayFormat.departmentNumbered(person.department, null)}",
+                        color = InkMuted,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
                 }
             }
         }
@@ -179,37 +181,9 @@ private fun StaffProfileScreen(
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        SectionTitle("Карточка сотрудника")
+        SectionTitle("Карточка другого сотрудника")
         SoftPanel {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(profile?.displayName ?: "—", style = MaterialTheme.typography.titleLarge)
-                StaffField("Дата рождения", ProfileDisplayFormat.idCardDate(profile?.dateOfBirth))
-                StaffField("Звание", profile?.rank ?: "—")
-                StaffField("Должность", profile?.post ?: "—")
-                StaffField("Отделение", profile?.department ?: "—")
-                StaffField("Нагрудный знак", profile?.breastplate ?: "—")
-                StaffField(
-                    "Профосмотр",
-                    if (profile?.medicalExamination == true) "пройден" else "не пройден"
-                )
-                StaffField(
-                    "Удостоверение",
-                    ProfileDisplayFormat.idCardRange(profile?.idCardIssued, profile?.idCardUntil)
-                )
-                StaffField("Телефон", profile?.mobilePhoneMasked ?: "—")
-                StaffField(
-                    "Ближайшая станция метро",
-                    ProfileDisplayFormat.metroLabel(
-                        nearestMetroLabel = profile?.nearestMetroLabel,
-                        nearestMetroId = profile?.nearestMetro,
-                        catalogLabel = catalog.metroLabel(profile?.nearestMetro)
-                    )
-                )
-                StaffAddress("Проживание", profile?.habitation)
-                StaffAddress("Регистрация", profile?.registration)
-                StaffEducation(education)
-                StaffVehicles(vehicles)
-            }
+            EmployeeCard(profile, education, vehicles, catalog)
         }
         StaffWorkSection(work, workError)
         SecondaryActionButton("К списку", onClick = onBack)
@@ -225,7 +199,7 @@ private fun StaffField(label: String, value: String) {
 }
 
 @Composable
-private fun StaffWorkSection(work: BotStaffWorkResponse?, error: String?) {
+internal fun StaffWorkSection(work: BotStaffWorkResponse?, error: String?) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
         SectionTitle("Результаты", "Месяц с 1-го числа, год с 1 января. «Всего» не обнуляется.")
         if (error != null) {

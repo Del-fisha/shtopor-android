@@ -36,8 +36,31 @@ class BotProfileJsonParseTest {
         assertEquals("Балтийская", parsed.nearestMetroLabel)
         assertEquals("12", parsed.habitation?.flat)
         assertEquals(
-            "15.января.2020 — 15.января.2030",
+            "15.01.2020 — 15.01.2030",
             ProfileDisplayFormat.idCardRange(parsed.idCardIssued, parsed.idCardUntil)
         )
+    }
+
+    @Test
+    fun parsesBadgeSplSeniorityAndFullPhone() {
+        val json = """
+            {
+              "userId": "11111111-1111-1111-1111-111111111111",
+              "displayName": "Тарасов Алексей Николаевич",
+              "breastplate": "025161",
+              "mobilePhoneMasked": "+7 *** *** 77 88",
+              "token": "65492",
+              "spl": "123456",
+              "seniorityLabel": "10 лет, 4 месяца",
+              "mobilePhone": "+7 (911) 555-77-88"
+            }
+        """.trimIndent()
+
+        val parsed = moshi.adapter(BotProfileResponse::class.java).fromJson(json)
+        assertNotNull(parsed)
+        assertEquals("65492", parsed!!.token)
+        assertEquals("123456", parsed.spl)
+        assertEquals("10 лет, 4 месяца", parsed.seniorityLabel)
+        assertEquals("+7 (911) 555-77-88", ProfileDisplayFormat.phone(parsed.mobilePhone))
     }
 }

@@ -83,6 +83,9 @@ interface BotApi {
     @GET("/api/mobile/me/profile")
     suspend fun profile(@Header("X-Mobile-Token") token: String): BotProfileResponse
 
+    @GET("/api/mobile/me/work")
+    suspend fun myWork(@Header("X-Mobile-Token") token: String): BotStaffWorkResponse
+
     @PUT("/api/mobile/me/profile")
     suspend fun updateProfile(
         @Header("X-Mobile-Token") token: String,

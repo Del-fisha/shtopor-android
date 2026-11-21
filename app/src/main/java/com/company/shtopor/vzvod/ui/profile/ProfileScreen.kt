@@ -19,26 +19,22 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.company.shtopor.vzvod.data.remote.ApiResult
 import com.company.shtopor.vzvod.data.remote.dto.BotAddressPatch
-import com.company.shtopor.vzvod.data.remote.dto.BotAddressResponse
 import com.company.shtopor.vzvod.data.remote.dto.BotEducationDto
 import com.company.shtopor.vzvod.data.remote.dto.BotEducationUpsertRequest
 import com.company.shtopor.vzvod.data.remote.dto.BotProfilePatchRequest
 import com.company.shtopor.vzvod.data.remote.dto.BotProfileResponse
+import com.company.shtopor.vzvod.data.remote.dto.BotStaffWorkResponse
 import com.company.shtopor.vzvod.data.remote.dto.BotVehicleItem
 import com.company.shtopor.vzvod.data.remote.dto.BotVehicleUpsertRequest
 import com.company.shtopor.vzvod.data.remote.userMessage
 import com.company.shtopor.vzvod.di.AppContainer
 import com.company.shtopor.vzvod.domain.AppCatalog
 import com.company.shtopor.vzvod.domain.EducationTypes
-import com.company.shtopor.vzvod.domain.ProfileDisplayFormat
 import com.company.shtopor.vzvod.ui.components.ConfirmDialog
 import com.company.shtopor.vzvod.ui.components.ErrorRetryDialog
 import com.company.shtopor.vzvod.ui.components.PageScaffold
@@ -66,6 +62,8 @@ fun ProfileScreen(
     var education by remember { mutableStateOf<BotEducationDto?>(null) }
     var vehicles by remember { mutableStateOf<List<BotVehicleItem>>(emptyList()) }
     var catalog by remember { mutableStateOf(AppCatalog.fallback()) }
+    var work by remember { mutableStateOf<BotStaffWorkResponse?>(null) }
+    var workError by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
     var confirmLogout by remember { mutableStateOf(false) }
@@ -85,6 +83,13 @@ fun ProfileScreen(
             when (val r = container.repository.catalogOptions()) {
                 is ApiResult.Ok -> catalog = r.value
                 is ApiResult.Err -> Unit
+            }
+            when (val r = container.repository.loadMyWork()) {
+                is ApiResult.Ok -> {
+                    work = r.value
+                    workError = null
+                }
+                is ApiResult.Err -> workError = r.userMessage()
             }
         }
     }
@@ -132,42 +137,16 @@ fun ProfileScreen(
 
             if (container.repository.role().isCommander) {
                 SecondaryActionButton(
-                    "Карточка сотрудника",
+                    "Карточка другого сотрудника",
                     onClick = { browsingStaff = true }
                 )
             }
 
             SoftPanel {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(profile?.displayName ?: "—", style = MaterialTheme.typography.titleLarge)
-                    ProfileField("Дата рождения", ProfileDisplayFormat.idCardDate(profile?.dateOfBirth))
-                    ProfileField("Звание", profile?.rank ?: "—")
-                    ProfileField("Должность", profile?.post ?: "—")
-                    ProfileField("Отделение", profile?.department ?: "—")
-                    ProfileField("Нагрудный знак", profile?.breastplate ?: "—")
-                    ProfileField(
-                        "Профосмотр",
-                        if (profile?.medicalExamination == true) "пройден" else "не пройден"
-                    )
-                    ProfileField(
-                        "Удостоверение",
-                        ProfileDisplayFormat.idCardRange(profile?.idCardIssued, profile?.idCardUntil)
-                    )
-                    ProfileField("Телефон", profile?.mobilePhoneMasked ?: "—")
-                    ProfileField(
-                        "Ближайшая станция метро",
-                        ProfileDisplayFormat.metroLabel(
-                            nearestMetroLabel = profile?.nearestMetroLabel,
-                            nearestMetroId = profile?.nearestMetro,
-                            catalogLabel = catalog.metroLabel(profile?.nearestMetro)
-                        )
-                    )
-                    AddressBlock("Проживание", profile?.habitation)
-                    AddressBlock("Регистрация", profile?.registration)
-                    EducationBlock(education)
-                    VehiclesBlock(vehicles)
-                }
+                EmployeeCard(profile, education, vehicles, catalog)
             }
+
+            StaffWorkSection(work, workError)
 
             SoftPanel {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -348,75 +327,6 @@ fun ProfileScreen(
 
     error?.let {
         ErrorRetryDialog(it, onRetry = { error = null; reload() }, onDismiss = { error = null })
-    }
-}
-
-@Composable
-private fun ProfileField(label: String, value: String) {
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Text(
-            label,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold
-        )
-        Text(value, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.fillMaxWidth())
-    }
-}
-
-@Composable
-private fun AddressBlock(title: String, address: BotAddressResponse?) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            fontStyle = FontStyle.Italic,
-            fontWeight = FontWeight.Medium,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
-        )
-        ProfileField("Город", address?.city ?: "—")
-        ProfileField("Улица", address?.street ?: "—")
-        ProfileField("Дом", address?.houseNumber ?: "—")
-        ProfileField("Квартира", address?.flat ?: "—")
-        if (!address?.summary.isNullOrBlank()) {
-            ProfileField("Адрес", address?.summary.orEmpty())
-        }
-    }
-}
-
-@Composable
-private fun EducationBlock(education: BotEducationDto?) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("Образование", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        if (education == null) {
-            Text("Нет данных", color = InkMuted)
-        } else {
-            ProfileField("Тип", education.typeLabel ?: "—")
-            ProfileField("Статус", education.statusLabel ?: "—")
-            ProfileField("Учебное заведение", education.nameOfInstitution ?: "—")
-            ProfileField("Начало", education.started ?: "—")
-            ProfileField("Окончание", education.until ?: "—")
-        }
-    }
-}
-
-@Composable
-private fun VehiclesBlock(vehicles: List<BotVehicleItem>) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("Транспорт", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        if (vehicles.isEmpty()) {
-            Text("Нет данных", color = InkMuted)
-        } else {
-            vehicles.forEach { v ->
-                ProfileField("Госномер", v.stateNumber ?: "—")
-                ProfileField("Марка", v.brand ?: "—")
-                ProfileField("Модель", v.model ?: "—")
-            }
-        }
     }
 }
 

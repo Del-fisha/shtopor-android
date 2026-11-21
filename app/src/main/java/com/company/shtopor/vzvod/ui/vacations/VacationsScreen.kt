@@ -32,6 +32,7 @@ import com.company.shtopor.vzvod.data.remote.dto.BotVocationItem
 import com.company.shtopor.vzvod.data.remote.userMessage
 import com.company.shtopor.vzvod.di.AppContainer
 import com.company.shtopor.vzvod.domain.AppCatalog
+import com.company.shtopor.vzvod.domain.ProfileDisplayFormat
 import com.company.shtopor.vzvod.ui.components.ConfirmDialog
 import com.company.shtopor.vzvod.ui.components.ErrorRetryDialog
 import com.company.shtopor.vzvod.ui.components.FieldLabel
@@ -90,12 +91,11 @@ fun VacationsScreen(
 
             SoftPanel {
                 val bal = data?.balance
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text("Остаток дней", style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        "Доступно: ${bal?.available ?: "—"} · положено: ${bal?.entitled ?: "—"} · использовано: ${bal?.used ?: "—"}",
-                        color = InkMuted
-                    )
+                    Text("Положено: ${bal?.entitled ?: "—"}")
+                    Text("Доступно: ${bal?.available ?: "—"}")
+                    Text("Использовано: ${bal?.used ?: "—"}")
                 }
             }
 
@@ -125,13 +125,19 @@ fun VacationsScreen(
             } else {
                 items.forEach { item ->
                     SoftPanel {
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        val days = ProfileDisplayFormat.inclusiveVacationDays(
+                            item.countOfDays,
+                            item.startDate,
+                            item.endDate
+                        )
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(
-                                item.typeLabel ?: catalog.vocationLabel(item.typeId),
-                                style = MaterialTheme.typography.titleMedium
+                                "${ProfileDisplayFormat.shortDate(item.startDate)} - ${ProfileDisplayFormat.shortDate(item.endDate)}" +
+                                    (days?.let { " ($it дн.)" } ?: ""),
+                                style = MaterialTheme.typography.bodyLarge
                             )
                             Text(
-                                "${item.startDate ?: "—"} — ${item.endDate ?: "—"} · ${item.countOfDays ?: "?"} дн.",
+                                item.typeLabel ?: catalog.vocationLabel(item.typeId),
                                 color = InkMuted
                             )
                             if (item.hasDeparture == true) {

@@ -255,6 +255,18 @@ class VzvodRepository(
         }
     }
 
+    suspend fun loadMyWork(): ApiResult<BotStaffWorkResponse> {
+        if (!networkMonitor.isOnlineNow()) return ApiResult.Err(0, "Нет сети", offline = true)
+        val selfId = session.userId
+        if (role().isCommander && !selfId.isNullOrBlank()) {
+            when (val staff = loadStaffWork(selfId)) {
+                is ApiResult.Ok -> return staff
+                is ApiResult.Err -> Unit
+            }
+        }
+        return safeApiCall { apiFactory.api().myWork(token()) }
+    }
+
     suspend fun loadStaffWork(userId: String): ApiResult<BotStaffWorkResponse> {
         if (!networkMonitor.isOnlineNow()) return ApiResult.Err(0, "Нет сети", offline = true)
         return safeApiCall { apiFactory.api().staffWork(token(), userId) }

@@ -118,17 +118,8 @@ fun EventsScreen(
             } else {
                 filtered.forEach { e ->
                     SoftPanel {
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(e.name ?: "Без названия", style = MaterialTheme.typography.titleMedium)
-                            Text(formatEventDate(e.date), color = InkMuted)
-                            Text(
-                                text = e.place?.takeIf { it.isNotBlank() } ?: "—",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = InkMuted
-                            )
-                            if (!e.time.isNullOrBlank()) {
-                                Text(e.time, style = MaterialTheme.typography.bodySmall, color = InkMuted)
-                            }
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            EventSummary(e)
                             if (filter == EventDepartmentFilter.ALL) {
                                 Text(
                                     text = EventListFilter.shiftCaption(e.shiftOfDepartment),
@@ -169,4 +160,21 @@ internal fun formatEventDate(raw: String?): String {
     return runCatching {
         LocalDate.parse(raw.take(10)).format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))
     }.getOrDefault(raw)
+}
+
+internal fun formatEventTime(raw: String?): String =
+    com.company.shtopor.vzvod.domain.CheckingRouteButtonLabel.toHm(raw)
+        ?: "Нет данных о времени начала"
+
+@Composable
+internal fun EventSummary(event: BotEventItem) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(formatEventDate(event.date), style = MaterialTheme.typography.bodyMedium)
+        Text(event.name?.takeIf { it.isNotBlank() } ?: "—", style = MaterialTheme.typography.titleMedium)
+        Text(
+            text = event.place?.takeIf { it.isNotBlank() } ?: "—",
+            style = MaterialTheme.typography.bodyMedium
+        )
+        Text(formatEventTime(event.time), style = MaterialTheme.typography.bodyMedium, color = InkMuted)
+    }
 }

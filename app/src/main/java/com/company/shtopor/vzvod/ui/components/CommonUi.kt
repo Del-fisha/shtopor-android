@@ -9,8 +9,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -27,8 +30,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.company.shtopor.vzvod.ui.theme.InkMuted
 import com.company.shtopor.vzvod.ui.theme.MistDeep
 import com.company.shtopor.vzvod.ui.theme.Offline
@@ -94,16 +100,18 @@ private fun StatusChip(color: androidx.compose.ui.graphics.Color, label: String)
 fun SoftPanel(
     modifier: Modifier = Modifier,
     surfaceAlpha: Float = 1f,
+    contentPadding: androidx.compose.ui.unit.Dp = 20.dp,
+    corner: androidx.compose.ui.unit.Dp = 20.dp,
     content: @Composable () -> Unit
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(corner),
         color = Paper.copy(alpha = surfaceAlpha.coerceIn(0.05f, 1f)),
         tonalElevation = 0.dp,
         shadowElevation = 0.dp
     ) {
-        Column(Modifier.padding(20.dp)) { content() }
+        Column(Modifier.padding(contentPadding)) { content() }
     }
 }
 
@@ -253,47 +261,57 @@ fun CompactMetricRow(
     onInc: () -> Unit,
     onDec: () -> Unit,
     modifier: Modifier = Modifier,
-    surfaceAlpha: Float = 1f
+    surfaceAlpha: Float = 1f,
+    tailHeight: Dp = 0.dp,
+    below: @Composable (() -> Unit)? = null
 ) {
-    SoftPanel(modifier = modifier, surfaceAlpha = surfaceAlpha) {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(
-                "$label · $value",
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.fillMaxWidth()
+    SoftPanel(
+        modifier = modifier,
+        surfaceAlpha = surfaceAlpha,
+        contentPadding = 6.dp,
+        corner = 8.dp
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(32.dp),
+                contentAlignment = Alignment.CenterStart
             ) {
+                Text(
+                    "$label · $value",
+                    fontSize = 12.sp,
+                    lineHeight = 14.sp,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 OutlinedButton(
                     onClick = onDec,
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(48.dp)
+                    shape = RoundedCornerShape(4.dp),
+                    contentPadding = PaddingValues(0.dp),
+                    modifier = Modifier.size(36.dp)
                 ) {
-                    Text(
-                        "−",
-                        style = MaterialTheme.typography.labelLarge,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Text("−", fontSize = 16.sp, textAlign = TextAlign.Center)
                 }
                 Button(
                     onClick = onInc,
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(48.dp)
+                    shape = RoundedCornerShape(4.dp),
+                    contentPadding = PaddingValues(0.dp),
+                    modifier = Modifier.size(36.dp)
                 ) {
-                    Text(
-                        "+",
-                        style = MaterialTheme.typography.labelLarge,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Text("+", fontSize = 16.sp, textAlign = TextAlign.Center)
+                }
+            }
+            if (tailHeight > 0.dp) {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(tailHeight)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    below?.invoke()
                 }
             }
         }

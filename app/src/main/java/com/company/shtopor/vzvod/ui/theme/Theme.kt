@@ -5,37 +5,17 @@ import androidx.compose.material3.Typography
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.company.shtopor.vzvod.R
 
-@OptIn(ExperimentalTextApi::class)
+// Один ресурс переменного шрифта. Несколько Font() с одним resId не меняют ось wght:
+// загрузчик берёт обычное начертание и отключает синтез, потому что жирное «уже зарегистрировано».
 val VzvodSans = FontFamily(
-    Font(
-        R.font.manrope_variable,
-        weight = FontWeight.Normal,
-        variationSettings = FontVariation.Settings(FontVariation.weight(400))
-    ),
-    Font(
-        R.font.manrope_variable,
-        weight = FontWeight.Medium,
-        variationSettings = FontVariation.Settings(FontVariation.weight(500))
-    ),
-    Font(
-        R.font.manrope_variable,
-        weight = FontWeight.SemiBold,
-        variationSettings = FontVariation.Settings(FontVariation.weight(600))
-    ),
-    Font(
-        R.font.manrope_variable,
-        weight = FontWeight.Bold,
-        variationSettings = FontVariation.Settings(FontVariation.weight(700))
-    )
+    Font(R.font.manrope_variable, weight = FontWeight.Normal)
 )
 
 val VzvodDisplay = FontFamily(

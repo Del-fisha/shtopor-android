@@ -57,8 +57,8 @@ import com.company.shtopor.vzvod.ui.components.ErrorRetryDialog
 import com.company.shtopor.vzvod.ui.components.PageScaffold
 import com.company.shtopor.vzvod.ui.components.SectionTitle
 import com.company.shtopor.vzvod.ui.components.SoftPanel
+import com.company.shtopor.vzvod.ui.events.EventSummary
 import com.company.shtopor.vzvod.ui.events.EventsScreen
-import com.company.shtopor.vzvod.ui.events.formatEventDate
 import com.company.shtopor.vzvod.ui.home.TodayDashboardPanel
 import com.company.shtopor.vzvod.ui.theme.Ink
 import com.company.shtopor.vzvod.ui.theme.InkMuted
@@ -359,15 +359,7 @@ private fun MonthShiftsCalendar(
             ) {
                 selectedEvents.forEach { e ->
                     SoftPanel {
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("Мероприятие", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                            Text(formatEventDate(e.date), color = InkMuted)
-                            Text(e.name ?: "—", style = MaterialTheme.typography.titleMedium)
-                            Text(e.place?.takeIf { it.isNotBlank() } ?: "—", color = InkMuted)
-                            if (!e.time.isNullOrBlank()) {
-                                Text(e.time, color = InkMuted)
-                            }
-                        }
+                        EventSummary(e)
                     }
                 }
                 if (CalendarMonthLogic.canShowShiftSummary(selected!!, today)) {
@@ -377,7 +369,8 @@ private fun MonthShiftsCalendar(
                         }
                         dayDashboard != null -> TodayDashboardPanel(
                             dashboard = dayDashboard!!,
-                            title = "Итоги смены"
+                            title = "Итоги смены",
+                            showRouteChecks = true
                         )
                         else -> SoftPanel {
                             Text(

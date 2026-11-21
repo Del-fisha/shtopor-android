@@ -31,7 +31,12 @@ data class BotProfileResponse(
     val nearestMetro: Int? = null,
     val nearestMetroLabel: String? = null,
     val fullAccess: Boolean? = null,
-    val dateOfBirth: String? = null
+    val dateOfBirth: String? = null,
+    val token: String? = null,
+    val spl: String? = null,
+    val seniorityLabel: String? = null,
+    val mobilePhone: String? = null,
+    val departmentNumber: Int? = null
 )
 
 data class BotAddressResponse(
@@ -288,7 +293,18 @@ data class BotTodayDashboardResponse(
     val operationalDate: String? = null,
     val departmentNumber: Int? = null,
     val routes: List<BotTodayRouteRow>? = emptyList(),
-    val totals: BotTodayTotals? = null
+    val totals: BotTodayTotals? = null,
+    val routeChecks: List<BotRouteChecksRow>? = emptyList()
+)
+
+data class BotRouteChecksRow(
+    val routeLabel: String? = null,
+    val checks: List<BotRouteCheckColumn>? = emptyList()
+)
+
+data class BotRouteCheckColumn(
+    val time: String? = null,
+    val checkerLabel: String? = null
 )
 
 data class BotTodayRouteRow(

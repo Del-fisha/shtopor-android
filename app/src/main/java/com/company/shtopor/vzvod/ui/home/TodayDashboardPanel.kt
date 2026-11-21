@@ -3,6 +3,8 @@ package com.company.shtopor.vzvod.ui.home
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,11 +21,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.company.shtopor.vzvod.data.remote.dto.BotLabeledCount
+import com.company.shtopor.vzvod.data.remote.dto.BotRouteChecksRow
 import com.company.shtopor.vzvod.data.remote.dto.BotTodayDashboardResponse
 import com.company.shtopor.vzvod.data.remote.dto.BotTodayRouteRow
 import com.company.shtopor.vzvod.data.remote.dto.BotTodayTotals
+import com.company.shtopor.vzvod.domain.CheckingRouteButtonLabel
+import com.company.shtopor.vzvod.domain.ProfileDisplayFormat
 import com.company.shtopor.vzvod.domain.ArticleCountFormatter
 import com.company.shtopor.vzvod.domain.LabeledCount
 import com.company.shtopor.vzvod.domain.TodayDashboardSection
@@ -35,17 +42,22 @@ import com.company.shtopor.vzvod.ui.theme.InkMuted
 @Composable
 fun TodayDashboardPanel(
     dashboard: BotTodayDashboardResponse,
-    title: String = "Сводка за сегодня"
+    title: String = "Сводка за сегодня",
+    showRouteChecks: Boolean = false
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "Отделение ${dashboard.departmentNumber ?: "—"} · ${dashboard.operationalDate ?: "—"}",
+                text = ProfileDisplayFormat.shortDate(dashboard.operationalDate),
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Text(
+                text = ProfileDisplayFormat.departmentPlain(dashboard.departmentNumber),
                 color = InkMuted,
                 style = MaterialTheme.typography.bodySmall
             )
@@ -58,6 +70,69 @@ fun TodayDashboardPanel(
                 }
                 TodayDashboardSection.ROUTES -> {
                     RoutesDashboardSection(dashboard.routes.orEmpty())
+                }
+            }
+        }
+        if (showRouteChecks) {
+            RouteChecksTable(dashboard.routeChecks.orEmpty())
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun RouteChecksTable(rows: List<BotRouteChecksRow>) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text("Проверки", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        if (rows.isEmpty()) {
+            Text("Нет проверок", color = InkMuted, fontSize = 11.sp)
+        } else {
+            SoftPanel(surfaceAlpha = 0.88f, contentPadding = 8.dp, corner = 10.dp) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    rows.forEach { row ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Text(
+                                text = row.routeLabel ?: "—",
+                                modifier = Modifier.weight(0.28f),
+                                fontSize = 11.sp,
+                                lineHeight = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 2
+                            )
+                            val checks = row.checks.orEmpty()
+                            if (checks.isEmpty()) {
+                                Text("—", modifier = Modifier.weight(0.72f), fontSize = 11.sp, color = InkMuted)
+                            } else {
+                                FlowRow(
+                                    modifier = Modifier.weight(0.72f),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    checks.forEach { cell ->
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Text(
+                                                text = CheckingRouteButtonLabel.toHm(cell.time) ?: "—",
+                                                fontSize = 11.sp,
+                                                lineHeight = 12.sp,
+                                                textAlign = TextAlign.Center
+                                            )
+                                            Text(
+                                                text = ProfileDisplayFormat.compactFio(cell.checkerLabel),
+                                                fontSize = 8.sp,
+                                                lineHeight = 9.sp,
+                                                color = InkMuted,
+                                                textAlign = TextAlign.Center
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

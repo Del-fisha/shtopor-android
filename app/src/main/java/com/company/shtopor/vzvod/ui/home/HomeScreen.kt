@@ -10,8 +10,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -23,7 +26,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.company.shtopor.vzvod.data.local.PetrovichBaselineStore
@@ -36,13 +41,13 @@ import com.company.shtopor.vzvod.data.remote.dto.BotTodayDashboardResponse
 import com.company.shtopor.vzvod.data.remote.userMessage
 import com.company.shtopor.vzvod.di.AppContainer
 import com.company.shtopor.vzvod.domain.CheckingRouteButtonLabel
+import com.company.shtopor.vzvod.domain.ProfileDisplayFormat
 import com.company.shtopor.vzvod.domain.RouteCheckEditLogic
 import com.company.shtopor.vzvod.domain.CheckingRouteCounters
 import com.company.shtopor.vzvod.domain.CheckingShiftPolicy
 import com.company.shtopor.vzvod.domain.PetrovichMetrics
 import com.company.shtopor.vzvod.domain.PetrovichPlayback
 import com.company.shtopor.vzvod.domain.PetrovichStageLogic
-import com.company.shtopor.vzvod.domain.ShiftMetricsLogic
 import com.company.shtopor.vzvod.ui.components.CompactMetricRow
 import com.company.shtopor.vzvod.ui.components.ErrorRetryDialog
 import com.company.shtopor.vzvod.ui.components.PageScaffold
@@ -249,242 +254,100 @@ fun ShiftsScreen(
                         }
                     }
                 } else {
-                    SoftPanel(surfaceAlpha = SHIFTS_PANEL_ALPHA) {
-                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Text("Текущая смена", style = MaterialTheme.typography.titleLarge)
+                    val visibleRoutes = checkableRoutes.filter { route ->
+                        !container.repository.role().isCommander || CheckingRouteCounters.commanderSeesRoute(
+                            route.routeLabel?.takeIf { it.isNotBlank() } ?: route.routeId
+                        )
+                    }
+                    val checkCount = if (CheckingShiftPolicy.showRouteCheckCounters(current.typeOfShiftId)) {
+                        visibleRoutes.sumOf { it.checks.orEmpty().size }
+                    } else {
+                        dashboard?.routeChecks.orEmpty()
+                            .filter { it.routeLabel == current.route }
+                            .sumOf { it.checks.orEmpty().size }
+                    }
+                    val routeType = current.shiftType?.takeIf { it.isNotBlank() } ?: current.typeOfShiftId.orEmpty()
+                    val routeNumber = current.route?.takeIf { it.isNotBlank() }
+                    SoftPanel(surfaceAlpha = SHIFTS_PANEL_ALPHA, contentPadding = 12.dp, corner = 12.dp) {
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text("Текущая смена", style = MaterialTheme.typography.titleMedium)
+                            Text(ProfileDisplayFormat.shortDate(current.date), style = MaterialTheme.typography.bodyMedium)
                             Text(
-                                listOfNotNull(
-                                    current.date,
-                                    current.route,
-                                    current.shiftType?.takeIf { it.isNotBlank() }
-                                        ?: current.typeOfShiftId,
-                                    current.startTime?.let { "с $it" }
-                                ).joinToString(" · "),
-                                style = MaterialTheme.typography.bodyLarge
+                                when {
+                                    routeType.isNotBlank() && routeNumber != null -> "$routeType ($routeNumber)"
+                                    routeType.isNotBlank() -> routeType
+                                    routeNumber != null -> routeNumber
+                                    else -> "—"
+                                },
+                                style = MaterialTheme.typography.bodyMedium
                             )
                             Text(
-                                if (CheckingShiftPolicy.showRouteCheckCounters(current.typeOfShiftId)) {
-                                    CheckingRouteCounters.formatSummary(
-                                        routeCount = checkableRoutes.size,
-                                        checkCount = checkableRoutes.sumOf { it.checks.orEmpty().size },
-                                        adminCount = current.administrativeViolationsCount,
-                                        criminalCount = current.criminalViolationsCount
-                                    )
-                                } else {
-                                    ShiftMetricsLogic.formatSummary(
-                                        current.ibdr,
-                                        current.migrant,
-                                        current.countOfStatements,
-                                        current.countOfClaims,
-                                        current.administrativeViolationsCount,
-                                        current.criminalViolationsCount
-                                    )
-                                },
+                                "Начало: ${CheckingRouteButtonLabel.toHm(current.startTime) ?: "—"}",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Text(
+                                "Ибдр : ${current.ibdr ?: 0} | АП : ${current.administrativeViolationsCount ?: 0} | УП : ${current.criminalViolationsCount ?: 0} | Проверок : $checkCount",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = InkMuted
+                            )
+                        }
+                    }
+
+                    if (CheckingShiftPolicy.showRouteCheckCounters(current.typeOfShiftId) && visibleRoutes.isEmpty()) {
+                        SoftPanel(surfaceAlpha = SHIFTS_PANEL_ALPHA, contentPadding = 12.dp, corner = 12.dp) {
+                            Text(
+                                "Маршрутов сегодня нет",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = InkMuted
                             )
                         }
                     }
 
-                    if (CheckingShiftPolicy.showRouteCheckCounters(current.typeOfShiftId)) {
-                        if (checkableRoutes.isEmpty()) {
-                            SoftPanel(surfaceAlpha = SHIFTS_PANEL_ALPHA) {
-                                Text(
-                                    "Маршрутов сегодня нет",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = InkMuted
-                                )
-                            }
-                        } else {
-                            checkableRoutes.forEach { route ->
-                                CompactMetricRow(
-                                    label = CheckingRouteButtonLabel.format(
-                                        route.routeLabel?.takeIf { it.isNotBlank() } ?: route.routeId,
-                                        route.checks.orEmpty().map { it.checkedAt }
-                                    ),
-                                    value = route.checks.orEmpty().size,
-                                    surfaceAlpha = SHIFTS_PANEL_ALPHA,
-                                    onInc = {
-                                        scope.launch {
-                                            when (val r = container.repository.recordRouteCheck(
-                                                current.id,
-                                                route.routeId
-                                            )) {
-                                                is ApiResult.Ok -> {
-                                                    checkableRoutes =
-                                                        container.repository.cachedCheckableRoutes(current.id)
-                                                    routeCommanders =
-                                                        container.repository.cachedRouteCommanders(current.id)
-                                                }
-                                                is ApiResult.Err -> error = r.userMessage()
-                                            }
-                                        }
-                                    },
-                                    onDec = {
-                                        val checkId = CheckingRouteCounters.lastCheckId(
-                                            route.checks.orEmpty().map { it.id }
-                                        )
-                                        if (checkId != null) {
-                                            scope.launch {
-                                                when (val r = container.repository.deleteRouteCheck(
-                                                    current.id,
-                                                    checkId
-                                                )) {
-                                                    is ApiResult.Ok -> {
-                                                        checkableRoutes =
-                                                            container.repository.cachedCheckableRoutes(current.id)
-                                                        routeCommanders =
-                                                            container.repository.cachedRouteCommanders(current.id)
-                                                    }
-                                                    is ApiResult.Err -> error = r.userMessage()
-                                                }
-                                            }
-                                        }
-                                    }
-                                )
-                                route.checks.orEmpty().forEach { check ->
-                                    val checkId = check.id
-                                    if (checkId.isNullOrBlank()) return@forEach
-                                    SecondaryActionButton(
-                                        text = buildString {
-                                            append(RouteCheckEditLogic.displayTime(check.checkedAt))
-                                            check.checkerLabel?.takeIf { it.isNotBlank() }?.let {
-                                                append(" · ")
-                                                append(it)
-                                            }
-                                        },
-                                        onClick = {
-                                            val label = route.routeLabel?.takeIf { it.isNotBlank() } ?: route.routeId
-                                            editingCheck = label to check
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    if (CheckingShiftPolicy.showMetricCounters(current.typeOfShiftId)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        CompactMetricRow(
-                            label = "ИБДР",
-                            value = current.ibdr ?: 0,
-                            surfaceAlpha = SHIFTS_PANEL_ALPHA,
-                            modifier = Modifier.weight(1f),
-                            onInc = {
-                                scope.launch {
-                                    when (val r = container.repository.adjustIbdr(current.id, 1)) {
-                                        is ApiResult.Ok -> open = r.value
-                                        is ApiResult.Err -> error = r.userMessage()
-                                    }
-                                }
-                            },
-                            onDec = {
-                                scope.launch {
-                                    when (val r = container.repository.adjustIbdr(current.id, -1)) {
-                                        is ApiResult.Ok -> open = r.value
-                                        is ApiResult.Err -> error = r.userMessage()
-                                    }
-                                }
-                            }
-                        )
-                        CompactMetricRow(
-                            label = "Мигрант",
-                            value = current.migrant ?: 0,
-                            surfaceAlpha = SHIFTS_PANEL_ALPHA,
-                            modifier = Modifier.weight(1f),
-                            onInc = {
-                                scope.launch {
-                                    when (val r = container.repository.adjustMigrant(current.id, 1)) {
-                                        is ApiResult.Ok -> open = r.value
-                                        is ApiResult.Err -> error = r.userMessage()
-                                    }
-                                }
-                            },
-                            onDec = {
-                                scope.launch {
-                                    when (val r = container.repository.adjustMigrant(current.id, -1)) {
-                                        is ApiResult.Ok -> open = r.value
-                                        is ApiResult.Err -> error = r.userMessage()
-                                    }
-                                }
-                            }
-                        )
-                    }
-
-                    CompactMetricRow(
-                        label = "Мигрант + ИБДР",
-                        value = minOf(current.ibdr ?: 0, current.migrant ?: 0),
-                        surfaceAlpha = SHIFTS_PANEL_ALPHA,
-                        onInc = {
+                    val boards = buildStepperCells(
+                        container = container,
+                        current = current,
+                        commander = container.repository.role().isCommander,
+                        checkableRoutes = visibleRoutes,
+                        onRouteInc = { routeId ->
                             scope.launch {
-                                when (val r = container.repository.adjustMigrantAndIbdr(current.id, 1)) {
-                                    is ApiResult.Ok -> open = r.value
+                                when (val r = container.repository.recordRouteCheck(current.id, routeId)) {
+                                    is ApiResult.Ok -> {
+                                        checkableRoutes = container.repository.cachedCheckableRoutes(current.id)
+                                        routeCommanders = container.repository.cachedRouteCommanders(current.id)
+                                    }
                                     is ApiResult.Err -> error = r.userMessage()
                                 }
                             }
                         },
-                        onDec = {
+                        onRouteDec = { _, checkId ->
                             scope.launch {
-                                when (val r = container.repository.adjustMigrantAndIbdr(current.id, -1)) {
+                                when (val r = container.repository.deleteRouteCheck(current.id, checkId)) {
+                                    is ApiResult.Ok -> {
+                                        checkableRoutes = container.repository.cachedCheckableRoutes(current.id)
+                                        routeCommanders = container.repository.cachedRouteCommanders(current.id)
+                                    }
+                                    is ApiResult.Err -> error = r.userMessage()
+                                }
+                            }
+                        },
+                        onEditCheck = { label, check -> editingCheck = label to check },
+                        onMetric = { adjust ->
+                            scope.launch {
+                                when (val r = adjust()) {
                                     is ApiResult.Ok -> open = r.value
                                     is ApiResult.Err -> error = r.userMessage()
                                 }
                             }
                         }
                     )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        CompactMetricRow(
-                            label = "Заявки",
-                            value = current.countOfStatements ?: 0,
-                            surfaceAlpha = SHIFTS_PANEL_ALPHA,
-                            modifier = Modifier.weight(1f),
-                            onInc = {
-                                scope.launch {
-                                    when (val r = container.repository.adjustStatements(current.id, 1)) {
-                                        is ApiResult.Ok -> open = r.value
-                                        is ApiResult.Err -> error = r.userMessage()
-                                    }
-                                }
-                            },
-                            onDec = {
-                                scope.launch {
-                                    when (val r = container.repository.adjustStatements(current.id, -1)) {
-                                        is ApiResult.Ok -> open = r.value
-                                        is ApiResult.Err -> error = r.userMessage()
-                                    }
-                                }
-                            }
-                        )
-                        CompactMetricRow(
-                            label = "Жалобы на наряд",
-                            value = current.countOfClaims ?: 0,
-                            surfaceAlpha = SHIFTS_PANEL_ALPHA,
-                            modifier = Modifier.weight(1f),
-                            onInc = {
-                                scope.launch {
-                                    when (val r = container.repository.adjustClaims(current.id, 1)) {
-                                        is ApiResult.Ok -> open = r.value
-                                        is ApiResult.Err -> error = r.userMessage()
-                                    }
-                                }
-                            },
-                            onDec = {
-                                scope.launch {
-                                    when (val r = container.repository.adjustClaims(current.id, -1)) {
-                                        is ApiResult.Ok -> open = r.value
-                                        is ApiResult.Err -> error = r.userMessage()
-                                    }
-                                }
-                            }
-                        )
+                    if (boards.checks.isNotEmpty()) {
+                        StepperGrid(boards.checks, tailHeight = 56.dp)
                     }
+                    if (boards.checks.isNotEmpty() && boards.metrics.isNotEmpty()) {
+                        HorizontalDivider(color = InkMuted.copy(alpha = 0.45f))
+                    }
+                    if (boards.metrics.isNotEmpty()) {
+                        StepperGrid(boards.metrics)
                     }
 
                     Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -568,6 +431,141 @@ fun ShiftsScreen(
             onDismiss = { error = null }
         )
     }
+}
+
+@Composable
+private fun StepperGrid(cells: List<StepperCell>, tailHeight: androidx.compose.ui.unit.Dp = 0.dp) {
+    cells.chunked(2).forEach { pair ->
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            pair.forEach { cell ->
+                CompactMetricRow(
+                    label = cell.label,
+                    value = cell.value,
+                    surfaceAlpha = SHIFTS_PANEL_ALPHA,
+                    modifier = Modifier.weight(1f),
+                    onInc = cell.onInc,
+                    onDec = cell.onDec,
+                    tailHeight = if (cell.below != null || tailHeight > 0.dp) tailHeight else 0.dp,
+                    below = cell.below
+                )
+            }
+            if (pair.size == 1) {
+                Spacer(Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+private data class StepperBoards(
+    val checks: List<StepperCell>,
+    val metrics: List<StepperCell>
+)
+
+private data class StepperCell(
+    val label: String,
+    val value: Int,
+    val onInc: () -> Unit,
+    val onDec: () -> Unit,
+    val below: (@Composable () -> Unit)? = null
+)
+
+@Composable
+private fun buildStepperCells(
+    container: AppContainer,
+    current: BotShiftItem,
+    commander: Boolean,
+    checkableRoutes: List<BotCheckableRouteItem>,
+    onRouteInc: (String) -> Unit,
+    onRouteDec: (String, String) -> Unit,
+    onEditCheck: (String, BotRouteCheckItem) -> Unit,
+    onMetric: (suspend () -> ApiResult<BotShiftItem>) -> Unit
+): StepperBoards {
+    val checks = mutableListOf<StepperCell>()
+    val metrics = mutableListOf<StepperCell>()
+    if (CheckingShiftPolicy.showRouteCheckCounters(current.typeOfShiftId)) {
+        checkableRoutes.forEach { route ->
+            val routeName = route.routeLabel?.takeIf { it.isNotBlank() } ?: route.routeId
+            if (commander && !CheckingRouteCounters.commanderSeesRoute(routeName)) return@forEach
+            val routeChecks = route.checks.orEmpty()
+            checks += StepperCell(
+                label = routeName,
+                value = routeChecks.size,
+                onInc = { onRouteInc(route.routeId) },
+                onDec = {
+                    val checkId = CheckingRouteCounters.lastCheckId(routeChecks.map { it.id })
+                    if (checkId != null) onRouteDec(route.routeId, checkId)
+                },
+                below = if (routeChecks.isEmpty()) null else {
+                    {
+                        Column {
+                            routeChecks.forEach { check ->
+                                val checkId = check.id
+                                if (checkId.isNullOrBlank()) return@forEach
+                                TextButton(
+                                    onClick = { onEditCheck(routeName, check) },
+                                    contentPadding = PaddingValues(0.dp),
+                                    modifier = Modifier.height(22.dp).fillMaxWidth()
+                                ) {
+                                    Text(
+                                        text = buildString {
+                                            append(RouteCheckEditLogic.displayTime(check.checkedAt))
+                                            check.checkerLabel?.takeIf { it.isNotBlank() }?.let {
+                                                append(" ")
+                                                append(ProfileDisplayFormat.compactFio(it))
+                                            }
+                                        },
+                                        fontSize = 10.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            )
+        }
+    }
+    val showPatrolMetrics = CheckingShiftPolicy.showMetricCounters(current.typeOfShiftId)
+    val showCommanderMetrics = commander && CheckingShiftPolicy.isChecking(current.typeOfShiftId)
+    if (showPatrolMetrics || showCommanderMetrics) {
+        metrics += StepperCell(
+            label = "ИБДР",
+            value = current.ibdr ?: 0,
+            onInc = { onMetric { container.repository.adjustIbdr(current.id, 1) } },
+            onDec = { onMetric { container.repository.adjustIbdr(current.id, -1) } }
+        )
+        metrics += StepperCell(
+            label = "Мигрант",
+            value = current.migrant ?: 0,
+            onInc = { onMetric { container.repository.adjustMigrant(current.id, 1) } },
+            onDec = { onMetric { container.repository.adjustMigrant(current.id, -1) } }
+        )
+        metrics += StepperCell(
+            label = "Мигрант + ИБДР",
+            value = minOf(current.ibdr ?: 0, current.migrant ?: 0),
+            onInc = { onMetric { container.repository.adjustMigrantAndIbdr(current.id, 1) } },
+            onDec = { onMetric { container.repository.adjustMigrantAndIbdr(current.id, -1) } }
+        )
+    }
+    if (showPatrolMetrics) {
+        metrics += StepperCell(
+            label = "Заявки",
+            value = current.countOfStatements ?: 0,
+            onInc = { onMetric { container.repository.adjustStatements(current.id, 1) } },
+            onDec = { onMetric { container.repository.adjustStatements(current.id, -1) } }
+        )
+        metrics += StepperCell(
+            label = "Жалобы на наряд",
+            value = current.countOfClaims ?: 0,
+            onInc = { onMetric { container.repository.adjustClaims(current.id, 1) } },
+            onDec = { onMetric { container.repository.adjustClaims(current.id, -1) } }
+        )
+    }
+    return StepperBoards(checks, metrics)
 }
 
 /** @deprecated use ShiftsScreen */
