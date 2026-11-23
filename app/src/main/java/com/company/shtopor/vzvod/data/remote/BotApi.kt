@@ -1,5 +1,8 @@
 package com.company.shtopor.vzvod.data.remote
 
+import com.company.shtopor.vzvod.data.remote.dto.AnnualBoardDto
+import com.company.shtopor.vzvod.data.remote.dto.AnnualPatchRequest
+import com.company.shtopor.vzvod.data.remote.dto.AnnualRosterDto
 import com.company.shtopor.vzvod.data.remote.dto.BotAdministrativeViolationCreateRequest
 import com.company.shtopor.vzvod.data.remote.dto.BotAuthRequest
 import com.company.shtopor.vzvod.data.remote.dto.BotAuthResponse
@@ -268,6 +271,23 @@ interface BotApi {
         @Header("X-Mobile-Token") token: String,
         @Body body: BotEventCreateRequest
     ): BotEventItem
+
+    @GET("/api/mobile/me/annual")
+    suspend fun annual(@Header("X-Mobile-Token") token: String): AnnualBoardDto
+
+    @PUT("/api/mobile/me/annual")
+    suspend fun patchAnnual(
+        @Header("X-Mobile-Token") token: String,
+        @Body body: AnnualPatchRequest
+    ): AnnualBoardDto
+
+    @GET("/api/mobile/me/annual/others")
+    suspend fun annualOthers(
+        @Header("X-Mobile-Token") token: String,
+        @Query("section") section: String? = null,
+        @Query("department") department: Int? = null,
+        @Query("sort") sort: String? = null
+    ): AnnualRosterDto
 
     @GET("/api/mobile/me/today-dashboard")
     suspend fun todayDashboard(

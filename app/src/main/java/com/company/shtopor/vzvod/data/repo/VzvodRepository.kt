@@ -21,6 +21,9 @@ import com.company.shtopor.vzvod.data.remote.dto.BotEducationDto
 import com.company.shtopor.vzvod.data.remote.dto.BotEducationUpsertRequest
 import com.company.shtopor.vzvod.data.remote.dto.BotEventCreateRequest
 import com.company.shtopor.vzvod.data.remote.dto.BotEventItem
+import com.company.shtopor.vzvod.data.remote.dto.AnnualBoardDto
+import com.company.shtopor.vzvod.data.remote.dto.AnnualPatchRequest
+import com.company.shtopor.vzvod.data.remote.dto.AnnualRosterDto
 import com.company.shtopor.vzvod.data.remote.dto.BotProfilePatchRequest
 import com.company.shtopor.vzvod.data.remote.dto.BotProfileResponse
 import com.company.shtopor.vzvod.data.remote.dto.BotCheckableRouteItem
@@ -296,6 +299,22 @@ class VzvodRepository(
     suspend fun cachedProfile(): BotProfileResponse? {
         val raw = db.cacheDao().profile()?.json ?: return null
         return runCatching { profileAdapter.fromJson(raw) }.getOrNull()
+    }
+
+    suspend fun loadAnnual(): ApiResult<AnnualBoardDto> {
+        if (!session.isLoggedIn) return ApiResult.Err(401, "Не авторизован")
+        return safeApiCall { apiFactory.api().annual(token()) }
+    }
+
+    suspend fun patchAnnual(patch: AnnualPatchRequest): ApiResult<AnnualBoardDto> {
+        if (!session.isLoggedIn) return ApiResult.Err(401, "Не авторизован")
+        if (!networkMonitor.isOnlineNow()) return ApiResult.Err(0, "Нет сети", offline = true)
+        return safeApiCall { apiFactory.api().patchAnnual(token(), patch) }
+    }
+
+    suspend fun loadAnnualOthers(section: String, department: Int?, sort: String): ApiResult<AnnualRosterDto> {
+        if (!session.isLoggedIn) return ApiResult.Err(401, "Не авторизован")
+        return safeApiCall { apiFactory.api().annualOthers(token(), section, department, sort) }
     }
 
     suspend fun updateProfile(patch: BotProfilePatchRequest): ApiResult<BotProfileResponse> {

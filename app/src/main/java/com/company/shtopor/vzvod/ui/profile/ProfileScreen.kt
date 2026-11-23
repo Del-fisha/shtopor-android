@@ -48,7 +48,7 @@ import com.company.shtopor.vzvod.ui.theme.InkMuted
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
-private enum class ProfileSection { NONE, BREASTPLATE, MEDICAL, CONTACTS, EDUCATION, VEHICLES }
+private enum class ProfileSection { NONE, BREASTPLATE, CONTACTS, EDUCATION, VEHICLES }
 
 @Composable
 fun ProfileScreen(
@@ -155,7 +155,6 @@ fun ProfileScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text("Изменить", style = MaterialTheme.typography.titleMedium)
                     SecondaryActionButton("Нагрудный знак", onClick = { section = ProfileSection.BREASTPLATE })
-                    SecondaryActionButton("Профосмотр", onClick = { section = ProfileSection.MEDICAL })
                     SecondaryActionButton("Контакты и адреса", onClick = { section = ProfileSection.CONTACTS })
                     SecondaryActionButton("Образование", onClick = {
                         scope.launch {
@@ -201,38 +200,6 @@ fun ProfileScreen(
                         }
                     }
                 )
-                ProfileSection.MEDICAL -> SoftPanel {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("Отметка о профосмотре", style = MaterialTheme.typography.titleMedium)
-                        PrimaryActionButton("Пройден", onClick = {
-                            scope.launch {
-                                when (val r = container.repository.updateProfile(
-                                    BotProfilePatchRequest(medicalExamination = true)
-                                )) {
-                                    is ApiResult.Ok -> {
-                                        profile = r.value
-                                        section = ProfileSection.NONE
-                                    }
-                                    is ApiResult.Err -> error = r.userMessage()
-                                }
-                            }
-                        })
-                        SecondaryActionButton("Не пройден", onClick = {
-                            scope.launch {
-                                when (val r = container.repository.updateProfile(
-                                    BotProfilePatchRequest(medicalExamination = false)
-                                )) {
-                                    is ApiResult.Ok -> {
-                                        profile = r.value
-                                        section = ProfileSection.NONE
-                                    }
-                                    is ApiResult.Err -> error = r.userMessage()
-                                }
-                            }
-                        })
-                        SecondaryActionButton("Отмена", onClick = { section = ProfileSection.NONE })
-                    }
-                }
                 ProfileSection.CONTACTS -> ContactsEditor(
                     profile = profile,
                     metroStations = catalog.metroStations,

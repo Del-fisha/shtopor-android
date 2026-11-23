@@ -59,7 +59,7 @@ fun EmployeeCard(
                     .background(if (passed) MedPassed else MedFailed)
             )
             Text("Профосмотр", fontWeight = FontWeight.Bold)
-            Text(if (passed) "пройден" else "не пройден")
+            Text(if (passed) "Пройден" else "Не пройден")
         }
 
         BlockGap()

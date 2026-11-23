@@ -62,6 +62,50 @@ data class BotAddressPatch(
     val statusOfHousing: String? = null
 )
 
+data class AnnualItemDto(
+    val kind: String,
+    val title: String?,
+    val group: String?,
+    val checked: Boolean? = false,
+    val counts: Boolean? = false,
+    val extendable: Boolean? = false,
+    val dateAllowed: Boolean? = false,
+    val performedOn: String? = null,
+    val validUntil: String? = null
+)
+
+data class AnnualBoardDto(
+    val female: Boolean? = false,
+    val medicalPassed: Boolean? = false,
+    val percent: Int? = 0,
+    val items: List<AnnualItemDto>? = emptyList()
+)
+
+data class AnnualPatchRequest(
+    val kind: String,
+    val checked: Boolean? = null,
+    val extend: Boolean? = null,
+    val performedOn: String? = null,
+    val clearDate: Boolean? = null
+)
+
+data class AnnualLineDto(
+    val title: String?,
+    val text: String?
+)
+
+data class AnnualPersonDto(
+    val userId: String?,
+    val shortFio: String?,
+    val departmentNumber: Int? = null,
+    val percent: Int? = 0,
+    val lines: List<AnnualLineDto>? = emptyList()
+)
+
+data class AnnualRosterDto(
+    val people: List<AnnualPersonDto>? = emptyList()
+)
+
 data class BotProfilePatchRequest(
     val breastplate: String? = null,
     val medicalExamination: Boolean? = null,

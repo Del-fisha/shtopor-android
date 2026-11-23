@@ -50,10 +50,16 @@ data class SectionTab(
 object AppSections {
     const val SERVICE = "service"
     const val GAME = "game"
+    const val ANNUAL = "annual"
     const val TAB_SHIFTS = "shifts"
     const val TAB_VACATIONS = "vacations"
     const val TAB_CALENDAR = "calendar"
     const val TAB_PROFILE = "profile"
+    const val TAB_ANNUAL_PROF = "annual_prof"
+    const val TAB_ANNUAL_CPD = "annual_cpd"
+    const val TAB_ANNUAL_TESTS = "annual_tests"
+    const val TAB_ANNUAL_PSY = "annual_psy"
+    const val TAB_ANNUAL_OTHERS = "annual_others"
 
     val serviceTabs = listOf(
         SectionTab(TAB_SHIFTS, "Смены"),
@@ -62,8 +68,17 @@ object AppSections {
         SectionTab(TAB_PROFILE, "Профиль")
     )
 
+    val annualTabs = listOf(
+        SectionTab(TAB_ANNUAL_PROF, "Профосмотр"),
+        SectionTab(TAB_ANNUAL_CPD, "ЦПД"),
+        SectionTab(TAB_ANNUAL_TESTS, "Зачёты"),
+        SectionTab(TAB_ANNUAL_PSY, "Психолог"),
+        SectionTab(TAB_ANNUAL_OTHERS, "Другие")
+    )
+
     val all = listOf(
         AppSection(SERVICE, "Служебное", serviceTabs),
+        AppSection(ANNUAL, "Ежегодно", annualTabs),
         AppSection(GAME, "Игра", emptyList())
     )
 

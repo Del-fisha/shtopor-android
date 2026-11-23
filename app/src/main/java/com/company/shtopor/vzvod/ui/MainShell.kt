@@ -32,6 +32,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.company.shtopor.vzvod.data.remote.dto.BotShiftItem
 import com.company.shtopor.vzvod.di.AppContainer
+import com.company.shtopor.vzvod.ui.annual.AnnualScreen
 import com.company.shtopor.vzvod.ui.calendar.CalendarScreen
 import com.company.shtopor.vzvod.ui.game.GameScreen
 import com.company.shtopor.vzvod.ui.home.ShiftsScreen
@@ -122,6 +123,12 @@ fun MainShell(
             val contentModifier = Modifier.padding(padding)
             when (section.id) {
                 AppSections.GAME -> GameScreen(contentModifier)
+                AppSections.ANNUAL -> AnnualScreen(
+                    container = container,
+                    online = online,
+                    tabId = history.tabId,
+                    modifier = contentModifier
+                )
                 else -> when (history.tabId) {
                     AppSections.TAB_VACATIONS -> VacationsScreen(
                         container = container,
