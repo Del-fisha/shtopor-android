@@ -13,8 +13,8 @@ android {
         applicationId = "com.company.shtopor.vzvod"
         minSdk = 29
         targetSdk = 35
-        versionCode = 20
-        versionName = "1.2.4.7"
+        versionCode = 23
+        versionName = "1.2.4.10"
         buildConfigField("String", "DEFAULT_CORE_BASE_URL", "\"http://www.vzvod-shtopor.ru\"")
         buildConfigField("String", "DEFAULT_API_KEY", "\"\"")
     }

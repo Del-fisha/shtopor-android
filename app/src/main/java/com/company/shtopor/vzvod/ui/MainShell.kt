@@ -1,6 +1,7 @@
 package com.company.shtopor.vzvod.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
@@ -28,15 +29,19 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.company.shtopor.vzvod.data.remote.dto.BotShiftItem
 import com.company.shtopor.vzvod.di.AppContainer
 import com.company.shtopor.vzvod.ui.annual.AnnualScreen
+import com.company.shtopor.vzvod.ui.components.ErrorRetryDialog
 import com.company.shtopor.vzvod.ui.calendar.CalendarScreen
 import com.company.shtopor.vzvod.ui.game.GameScreen
 import com.company.shtopor.vzvod.ui.home.ShiftsScreen
 import com.company.shtopor.vzvod.ui.profile.ProfileScreen
+import com.company.shtopor.vzvod.ui.profile.StaffDirectoryScreen
 import com.company.shtopor.vzvod.ui.vacations.VacationsScreen
 import kotlinx.coroutines.launch
 
@@ -61,6 +66,7 @@ fun MainShell(
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     var history by remember { mutableStateOf(ShellHistory()) }
+    var staffError by remember { mutableStateOf<String?>(null) }
     val section = AppSections.byId(history.areaId)
 
     BackHandler(enabled = !drawerState.isOpen && history.canGoBack()) {
@@ -73,9 +79,11 @@ fun MainShell(
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            ModalDrawerSheet(modifier = Modifier.width(220.dp)) {
+            ModalDrawerSheet(modifier = Modifier.width(300.dp)) {
                 Text(
-                    "Разделы",
+                    "МЕНЮ",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 22.sp,
                     modifier = Modifier.padding(horizontal = 28.dp, vertical = 20.dp)
                 )
                 AppSections.all.forEach { item ->
@@ -123,6 +131,13 @@ fun MainShell(
             val contentModifier = Modifier.padding(padding)
             when (section.id) {
                 AppSections.GAME -> GameScreen(contentModifier)
+                AppSections.STAFF -> Box(contentModifier) {
+                    StaffDirectoryScreen(
+                        container = container,
+                        onBack = { history = history.back() },
+                        onError = { staffError = it }
+                    )
+                }
                 AppSections.ANNUAL -> AnnualScreen(
                     container = container,
                     online = online,
@@ -159,5 +174,12 @@ fun MainShell(
                 }
             }
         }
+    }
+    staffError?.let { message ->
+        ErrorRetryDialog(
+            message,
+            onRetry = { staffError = null },
+            onDismiss = { staffError = null }
+        )
     }
 }

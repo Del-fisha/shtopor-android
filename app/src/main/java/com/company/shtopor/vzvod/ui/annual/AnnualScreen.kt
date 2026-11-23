@@ -30,7 +30,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.company.shtopor.vzvod.data.remote.ApiResult
 import com.company.shtopor.vzvod.data.remote.dto.AnnualBoardDto
 import com.company.shtopor.vzvod.data.remote.dto.AnnualItemDto
@@ -48,6 +51,7 @@ import java.time.format.DateTimeFormatter
 
 private val Green = Color(0xFF2E7D32)
 private val Red = Color(0xFFC62828)
+private val Blue = Color(0xFF1565C0)
 private val Track = Color(0xFFE6E6E6)
 private val DMY = DateTimeFormatter.ofPattern("dd.MM.yyyy")
 
@@ -144,50 +148,110 @@ private fun Group(title: String, items: List<AnnualItemDto>, group: String, patc
     val rows = items.filter { it.group == group }
     if (rows.isEmpty()) return
     Text(title, style = MaterialTheme.typography.titleMedium)
-    rows.forEach { item -> key(item.kind) { ItemRow(item, patch) } }
+    rows.forEach { item ->
+        key(item.kind) {
+            if (group == "ANALYSIS") AnalysisRow(item, patch) else ItemRow(item, patch)
+        }
+    }
+}
+
+@Composable
+private fun AnalysisRow(item: AnnualItemDto, patch: (AnnualPatchRequest) -> Unit) {
+    var text by remember(item.kind, item.performedOn) { mutableStateOf(showDate(item.performedOn)) }
+    val parsed = remember(text) { runCatching { LocalDate.parse(text.trim(), DMY) }.getOrNull() }
+    val storedUntil = remember(item.validUntil) { runCatching { LocalDate.parse(item.validUntil) }.getOrNull() }
+    val useStoredUntil = parsed != null && parsed.toString() == item.performedOn
+    val hint = analysisHint(
+        item.kind,
+        parsed,
+        if (useStoredUntil) storedUntil else null,
+        LocalDate.now()
+    )
+    LaunchedEffect(text) {
+        val raw = text.trim()
+        if (raw.isEmpty()) {
+            if (!item.performedOn.isNullOrBlank()) {
+                patch(AnnualPatchRequest(kind = item.kind, clearDate = true))
+            }
+            return@LaunchedEffect
+        }
+        if (raw.length < 10) return@LaunchedEffect
+        val iso = runCatching { LocalDate.parse(raw, DMY).toString() }.getOrNull() ?: return@LaunchedEffect
+        if (iso == item.performedOn) return@LaunchedEffect
+        patch(AnnualPatchRequest(kind = item.kind, performedOn = iso, checked = true))
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            Checkbox(
+                checked = item.checked == true,
+                onCheckedChange = { patch(AnnualPatchRequest(kind = item.kind, checked = it)) }
+            )
+            Text(item.title.orEmpty(), modifier = Modifier.weight(1f))
+        }
+        OutlinedTextField(
+            value = text,
+            onValueChange = { text = it },
+            label = { Text("Дата") },
+            placeholder = { Text("дд.мм.гггг") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+        val caption = when (hint.kind) {
+            AnalysisHintKind.UNKNOWN -> "Дата предыдущей сдачи неизвестна"
+            AnalysisHintKind.VALID -> "Можно не сдавать до ${showDate(hint.until?.toString())}"
+            AnalysisHintKind.EXPIRED -> "Просрочена дата"
+        }
+        val color = when (hint.kind) {
+            AnalysisHintKind.UNKNOWN -> Blue
+            AnalysisHintKind.VALID -> Green
+            AnalysisHintKind.EXPIRED -> Red
+        }
+        Text(caption, color = color, fontSize = 12.sp, lineHeight = 14.sp)
+    }
 }
 
 @Composable
 private fun ItemRow(item: AnnualItemDto, patch: (AnnualPatchRequest) -> Unit) {
     val counts = item.counts == true
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             Checkbox(
                 checked = item.checked == true,
                 onCheckedChange = { patch(AnnualPatchRequest(kind = item.kind, checked = it)) }
             )
-            Column {
-                Text(item.title.orEmpty(), fontWeight = FontWeight.Medium)
-                Text(
-                    if (counts) "Пройден" else "Не пройден",
-                    color = if (counts) Green else Red,
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-        }
-        if (counts && !item.validUntil.isNullOrBlank()) {
-            Text("Актуально до ${showDate(item.validUntil)}", color = Green, style = MaterialTheme.typography.bodySmall)
+            Text(item.title.orEmpty(), modifier = Modifier.weight(1f), maxLines = 1)
+            Text(
+                if (counts && !item.validUntil.isNullOrBlank()) "до ${showDate(item.validUntil)}"
+                else if (counts) "Пройден"
+                else "Не пройден",
+                color = if (counts) Green else Red,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1
+            )
         }
         if (item.extendable == true) {
-            SecondaryActionButton("Продлить", onClick = {
-                patch(AnnualPatchRequest(kind = item.kind, extend = true))
-            })
+            SecondaryActionButton(
+                "Продлить",
+                onClick = { patch(AnnualPatchRequest(kind = item.kind, extend = true)) }
+            )
         }
         if (item.dateAllowed == true) {
             var text by remember(item.kind, item.performedOn) { mutableStateOf(showDate(item.performedOn)) }
             var dateError by remember(item.kind) { mutableStateOf<String?>(null) }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
             OutlinedTextField(
                 value = text,
                 onValueChange = { text = it },
                 label = { Text("Дата") },
                 placeholder = { Text("дд.мм.гггг") },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.weight(1f),
                 singleLine = true
             )
-            if (dateError != null) {
-                Text(dateError!!, color = Red, style = MaterialTheme.typography.bodySmall)
-            }
-            SecondaryActionButton("Сохранить дату", onClick = {
+            SecondaryActionButton("Ок", onClick = {
                 val raw = text.trim()
                 if (raw.isEmpty()) {
                     dateError = null
@@ -201,7 +265,11 @@ private fun ItemRow(item: AnnualItemDto, patch: (AnnualPatchRequest) -> Unit) {
                     dateError = null
                     patch(AnnualPatchRequest(kind = item.kind, performedOn = iso))
                 }
-            })
+            }, modifier = Modifier.weight(0.6f))
+            }
+            if (dateError != null) {
+                Text(dateError!!, color = Red, style = MaterialTheme.typography.bodySmall)
+            }
         }
     }
 }
@@ -216,14 +284,14 @@ private fun OthersTab(
     onDepartment: (Int?) -> Unit,
     onSort: (String) -> Unit
 ) {
-    SectionTitle("Другие сотрудники")
+    SectionTitle("Результаты коллег")
     ChipRow(
         listOf("ALL" to "Всё", "PROFOSMOTR" to "Профосмотр", "TESTS" to "Зачёты", "CPD" to "ЦПД", "PSYCHOLOGIST" to "Психолог"),
         section,
         onSection
     )
     ChipRow(
-        listOf("all" to "Оба", "1" to "1-е", "2" to "2-е"),
+        listOf("all" to "Оба отделения", "1" to "1-е", "2" to "2-е"),
         if (department == null) "all" else department.toString(),
         { value -> onDepartment(value.toIntOrNull()) }
     )
@@ -250,9 +318,19 @@ private fun OthersTab(
             first = false
         }
         PercentBar(person.percent ?: 0)
-        Text(person.shortFio.orEmpty(), fontWeight = FontWeight.Bold)
+        Text(
+            person.shortFio.orEmpty(),
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
         person.lines.orEmpty().forEach { line ->
-            Text("${line.title}: ${line.text}")
+            Text(
+                "${line.title}:",
+                fontWeight = FontWeight.Bold,
+                textDecoration = TextDecoration.Underline
+            )
+            Text(line.text.orEmpty())
         }
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
     }

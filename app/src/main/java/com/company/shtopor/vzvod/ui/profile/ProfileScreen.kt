@@ -68,7 +68,6 @@ fun ProfileScreen(
     var error by remember { mutableStateOf<String?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
     var confirmLogout by remember { mutableStateOf(false) }
-    var browsingStaff by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     fun reloadExtras() {
@@ -113,22 +112,8 @@ fun ProfileScreen(
         container.repository.pendingOpsFlow().collectLatest { pending = it }
     }
 
-    BackHandler(enabled = section != ProfileSection.NONE && !browsingStaff) {
+    BackHandler(enabled = section != ProfileSection.NONE) {
         section = ProfileSection.NONE
-    }
-
-    if (browsingStaff) {
-        PageScaffold(online = online, pendingCount = pending, modifier = modifier) {
-            StaffDirectoryScreen(
-                container = container,
-                onBack = { browsingStaff = false },
-                onError = { error = it }
-            )
-        }
-        error?.let {
-            ErrorRetryDialog(it, onRetry = { error = null }, onDismiss = { error = null })
-        }
-        return
     }
 
     PageScaffold(online = online, pendingCount = pending, modifier = modifier) {
@@ -139,11 +124,6 @@ fun ProfileScreen(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             SectionTitle("Профиль")
-
-            SecondaryActionButton(
-                "Карточка другого сотрудника",
-                onClick = { browsingStaff = true }
-            )
 
             SoftPanel {
                 EmployeeCard(profile, education, vehicles, catalog)

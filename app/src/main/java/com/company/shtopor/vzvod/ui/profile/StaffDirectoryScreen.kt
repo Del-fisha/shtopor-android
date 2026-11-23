@@ -101,7 +101,7 @@ fun StaffDirectoryScreen(
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        SectionTitle("Карточка другого сотрудника", "Только просмотр.")
+        SectionTitle("Карточки сотрудников", "Только просмотр.")
         OutlinedTextField(
             value = query,
             onValueChange = { query = it },
