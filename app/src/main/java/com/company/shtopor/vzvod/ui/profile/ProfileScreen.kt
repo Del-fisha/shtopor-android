@@ -1,5 +1,6 @@
 package com.company.shtopor.vzvod.ui.profile
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -112,6 +113,10 @@ fun ProfileScreen(
         container.repository.pendingOpsFlow().collectLatest { pending = it }
     }
 
+    BackHandler(enabled = section != ProfileSection.NONE && !browsingStaff) {
+        section = ProfileSection.NONE
+    }
+
     if (browsingStaff) {
         PageScaffold(online = online, pendingCount = pending, modifier = modifier) {
             StaffDirectoryScreen(
@@ -135,12 +140,10 @@ fun ProfileScreen(
         ) {
             SectionTitle("Профиль")
 
-            if (container.repository.role().isCommander) {
-                SecondaryActionButton(
-                    "Карточка другого сотрудника",
-                    onClick = { browsingStaff = true }
-                )
-            }
+            SecondaryActionButton(
+                "Карточка другого сотрудника",
+                onClick = { browsingStaff = true }
+            )
 
             SoftPanel {
                 EmployeeCard(profile, education, vehicles, catalog)

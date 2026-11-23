@@ -1,5 +1,6 @@
 package com.company.shtopor.vzvod.ui.profile
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -78,6 +79,10 @@ fun StaffDirectoryScreen(
     }
 
     LaunchedEffect(Unit) { load(0, "") }
+
+    BackHandler {
+        if (viewedId != null) viewedId = null else onBack()
+    }
 
     val selected = viewedId
     if (selected != null) {
@@ -169,9 +174,11 @@ private fun StaffProfileScreen(
             is ApiResult.Ok -> catalog = result.value
             is ApiResult.Err -> Unit
         }
-        when (val result = container.repository.loadStaffWork(userId)) {
-            is ApiResult.Ok -> work = result.value
-            is ApiResult.Err -> workError = result.userMessage()
+        if (container.repository.role().isCommander) {
+            when (val result = container.repository.loadStaffWork(userId)) {
+                is ApiResult.Ok -> work = result.value
+                is ApiResult.Err -> workError = result.userMessage()
+            }
         }
     }
 
@@ -185,7 +192,9 @@ private fun StaffProfileScreen(
         SoftPanel {
             EmployeeCard(profile, education, vehicles, catalog)
         }
-        StaffWorkSection(work, workError)
+        if (container.repository.role().isCommander) {
+            StaffWorkSection(work, workError)
+        }
         SecondaryActionButton("К списку", onClick = onBack)
     }
 }
