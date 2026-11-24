@@ -233,7 +233,9 @@ data class BotColleagueItem(
     /** @deprecated старое имя поля; сервер шлёт label */
     val displayName: String? = null,
     val department: Int? = null,
-    val rank: String? = null
+    val rank: String? = null,
+    /** Id должности с сервера: A — командир взвода … E — стажёр. */
+    val post: String? = null
 ) {
     val shortName: String
         get() = label?.takeIf { it.isNotBlank() }

@@ -42,6 +42,7 @@ import com.company.shtopor.vzvod.data.remote.userMessage
 import com.company.shtopor.vzvod.di.AppContainer
 import com.company.shtopor.vzvod.domain.AppCatalog
 import com.company.shtopor.vzvod.domain.OperationalDay
+import com.company.shtopor.vzvod.domain.sortedForShiftPartnerPick
 import com.company.shtopor.vzvod.ui.components.ErrorRetryDialog
 import com.company.shtopor.vzvod.ui.components.FieldHint
 import com.company.shtopor.vzvod.ui.components.FieldLabel
@@ -85,7 +86,7 @@ fun CreateShiftScreen(
     fun loadColleagues() {
         scope.launch {
             when (val r = container.repository.colleagues(preferredDept)) {
-                is ApiResult.Ok -> colleagues = r.value
+                is ApiResult.Ok -> colleagues = r.value.sortedForShiftPartnerPick()
                 is ApiResult.Err -> error = r.userMessage()
             }
         }
@@ -166,7 +167,7 @@ fun CreateShiftScreen(
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         FieldLabel("Напарники")
                         FieldHint(
-                            "Напарник необязателен — можно одному или выбрать коллег. Сначала ваше отделение, затем другое, внутри — по фамилии. Занятые в смене скрыты."
+                            "Напарник необязателен — можно одному или выбрать коллег. Сначала должность, затем фамилия. Занятые в смене скрыты."
                         )
                         if (colleagues.isEmpty()) {
                             FieldHint("Список пуст или недоступен офлайн. Проверьте сеть.")
